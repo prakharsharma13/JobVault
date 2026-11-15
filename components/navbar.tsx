@@ -41,7 +41,11 @@ export default function Navbar() {
                   <button className="ml-1 flex items-center justify-center rounded-full outline-none ring-offset-background transition-shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                     <Avatar className="h-9 w-9 border border-border">
                       <AvatarFallback className="bg-primary text-sm font-medium text-primary-foreground">
-                        {session.user.name[0].toUpperCase()}
+                        {(
+                          session.user.name?.[0] ||
+                          session.user.email?.[0] ||
+                          "U"
+                        ).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </button>
@@ -51,7 +55,7 @@ export default function Navbar() {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {session.user.name}
+                        {session.user.name || session.user.email}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {session.user.email}
