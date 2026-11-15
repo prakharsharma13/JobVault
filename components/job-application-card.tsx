@@ -220,7 +220,7 @@ export default function JobApplicationCard({
             </div>
           )}
 
-          {job.jobUrl && (
+          {job.jobUrl && /^https?:\/\//i.test(job.jobUrl) && (
             <a
               href={job.jobUrl}
               target="_blank"
