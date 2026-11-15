@@ -52,7 +52,7 @@ export async function createJobApplication(data: JobApplicationData) {
     location,
     notes,
     salary,
-    jobUrl: sanitizeJobUrl(jobUrl),
+    jobUrl,
     columnId,
     boardId,
     tags,
