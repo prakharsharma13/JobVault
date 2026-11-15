@@ -46,6 +46,7 @@ export default function JobApplicationCard({
   dragHandleProps,
 }: JobApplicationCardProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     company: job.company,
     position: job.position,
@@ -53,27 +54,52 @@ export default function JobApplicationCard({
     notes: job.notes || "",
     salary: job.salary || "",
     jobUrl: job.jobUrl || "",
-    columnId: job.columnId || "",
     tags: job.tags?.join(", ") || "",
     description: job.description || "",
   });
 
+  React.useEffect(() => {
+    if (isEditing) {
+      setFormData({
+        company: job.company,
+        position: job.position,
+        location: job.location || "",
+        notes: job.notes || "",
+        salary: job.salary || "",
+        jobUrl: job.jobUrl || "",
+        tags: job.tags?.join(", ") || "",
+        description: job.description || "",
+      });
+    }
+  }, [isEditing, job]);
+
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       const result = await updateJobApplication(job._id, {
-        ...formData,
+        company: formData.company,
+        position: formData.position,
+        location: formData.location,
+        notes: formData.notes,
+        salary: formData.salary,
+        jobUrl: formData.jobUrl,
         tags: formData.tags
           .split(",")
           .map((tag) => tag.trim())
           .filter((tag) => tag.length > 0),
+        description: formData.description,
       });
 
       if (!result.error) {
         setIsEditing(false);
+      } else {
+        console.error("Failed to update job application:", result.error);
       }
     } catch (err) {
-      console.error("Failed to move job application: ", err);
+      console.error("Failed to update job application: ", err);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -85,7 +111,7 @@ export default function JobApplicationCard({
         console.error("Failed to delete job application:", result.error);
       }
     } catch (err) {
-      console.error("Failed to move job application: ", err);
+      console.error("Failed to delete job application: ", err);
     }
   }
 
@@ -319,11 +345,14 @@ export default function JobApplicationCard({
               <Button
                 type="button"
                 variant="outline"
+                disabled={isSubmitting}
                 onClick={() => setIsEditing(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit">Save Changes</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
