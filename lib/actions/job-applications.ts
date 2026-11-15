@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import mongoose from "mongoose";
 import { getSession } from "../auth/auth";
 import connectDB from "../db";
 import { Board, Column, JobApplication } from "../models";
@@ -148,6 +149,20 @@ export async function updateJobApplication(
     newColumnId && newColumnId !== currentColumnId;
 
   if (isMovingToDifferentColumn) {
+    if (!mongoose.Types.ObjectId.isValid(newColumnId)) {
+      return { error: "Invalid target column ID" };
+    }
+
+    // Verify target column belongs to the user's board
+    const targetColumn = await Column.findOne({
+      _id: newColumnId,
+      boardId: jobApplication.boardId,
+    });
+
+    if (!targetColumn) {
+      return { error: "Target column not found on your board" };
+    }
+
     await Column.findByIdAndUpdate(currentColumnId, {
       $pull: { jobApplications: id },
     });
