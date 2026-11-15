@@ -148,6 +148,16 @@ export async function updateJobApplication(
     newColumnId && newColumnId !== currentColumnId;
 
   if (isMovingToDifferentColumn) {
+    // Verify target column belongs to the user's board
+    const targetColumn = await Column.findOne({
+      _id: newColumnId,
+      boardId: jobApplication.boardId,
+    });
+
+    if (!targetColumn) {
+      return { error: "Target column not found on your board" };
+    }
+
     await Column.findByIdAndUpdate(currentColumnId, {
       $pull: { jobApplications: id },
     });
