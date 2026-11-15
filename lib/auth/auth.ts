@@ -1,12 +1,12 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
+import { MongoClient } from "mongodb";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { initializeUserBoard } from "../init-user-board";
-import connectDB from "../db";
 
-const mongooseInstance = await connectDB();
-const client = mongooseInstance.connection.getClient();
+const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/jobvault";
+const client = new MongoClient(uri);
 const db = client.db();
 
 export const auth = betterAuth({
