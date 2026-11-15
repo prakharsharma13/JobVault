@@ -19,6 +19,24 @@ interface JobApplicationData {
   description?: string;
 }
 
+function sanitizeJobUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  const trimmed = url.trim();
+  if (!trimmed) return undefined;
+
+  try {
+    const hasProtocol = /^https?:\/\//i.test(trimmed);
+    const fullUrl = hasProtocol ? trimmed : `https://${trimmed}`;
+    const parsed = new URL(fullUrl);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+  } catch (_) {
+    // Malformed URL
+  }
+  return undefined;
+}
+
 export async function createJobApplication(data: JobApplicationData) {
   const session = await getSession();
 
@@ -77,7 +95,7 @@ export async function createJobApplication(data: JobApplicationData) {
     location,
     notes,
     salary,
-    jobUrl,
+    jobUrl: sanitizeJobUrl(jobUrl),
     columnId,
     boardId,
     userId: session.user.id,
@@ -127,7 +145,7 @@ export async function updateJobApplication(
     return { error: "Unauthorized" };
   }
 
-  const { columnId, order, ...otherUpdates } = updates;
+  const { columnId, order, jobUrl, ...otherUpdates } = updates;
 
   const updatesToApply: Partial<{
     company: string;
@@ -140,7 +158,10 @@ export async function updateJobApplication(
     order: number;
     tags: string[];
     description: string;
-  }> = otherUpdates;
+  }> = {
+    ...otherUpdates,
+    ...(jobUrl !== undefined ? { jobUrl: sanitizeJobUrl(jobUrl) || "" } : {}),
+  };
 
   const currentColumnId = jobApplication.columnId.toString();
   const newColumnId = columnId?.toString();
