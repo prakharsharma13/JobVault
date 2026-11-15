@@ -83,7 +83,7 @@ export async function createJobApplication(data: JobApplicationData) {
     tags: tags || [],
     description,
     status: "applied",
-    order: maxOrder ? maxOrder.order + 1 : 0,
+    order: maxOrder && typeof maxOrder.order === "number" ? maxOrder.order + 100 : 0,
   });
 
   await Column.findByIdAndUpdate(columnId, {
@@ -159,25 +159,29 @@ export async function updateJobApplication(
       .sort({ order: 1 })
       .lean();
 
-    let newOrderValue: number;
+    const targetIndex =
+      order !== undefined && order !== null
+        ? Math.max(0, Math.min(order, jobsInTargetColumn.length))
+        : jobsInTargetColumn.length;
 
-    if (order !== undefined && order !== null) {
-      newOrderValue = order * 100;
+    const newOrderValue = targetIndex * 100;
 
-      const jobsThatNeedToShift = jobsInTargetColumn.slice(order);
-      for (const job of jobsThatNeedToShift) {
-        await JobApplication.findByIdAndUpdate(job._id, {
-          $set: { order: job.order + 100 },
+    const bulkOps = [];
+    for (let i = 0; i < jobsInTargetColumn.length; i++) {
+      const currentJob = jobsInTargetColumn[i];
+      const assignedOrder = i < targetIndex ? i * 100 : (i + 1) * 100;
+      if (currentJob.order !== assignedOrder) {
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: currentJob._id },
+            update: { $set: { order: assignedOrder } },
+          },
         });
       }
-    } else {
-      if (jobsInTargetColumn.length > 0) {
-        const lastJobOrder =
-          jobsInTargetColumn[jobsInTargetColumn.length - 1].order || 0;
-        newOrderValue = lastJobOrder + 100;
-      } else {
-        newOrderValue = 0;
-      }
+    }
+
+    if (bulkOps.length > 0) {
+      await JobApplication.bulkWrite(bulkOps);
     }
 
     updatesToApply.columnId = newColumnId;
@@ -194,33 +198,25 @@ export async function updateJobApplication(
       .sort({ order: 1 })
       .lean();
 
-    const currentJobOrder = jobApplication.order || 0;
-    const currentPositionIndex = otherJobsInColumn.findIndex(
-      (job) => job.order > currentJobOrder
-    );
-    const oldPositionindex =
-      currentPositionIndex === -1
-        ? otherJobsInColumn.length
-        : currentPositionIndex;
+    const targetIndex = Math.max(0, Math.min(order, otherJobsInColumn.length));
+    const newOrderValue = targetIndex * 100;
 
-    const newOrderValue = order * 100;
-
-    if (order < oldPositionindex) {
-      const jobsToShiftDown = otherJobsInColumn.slice(order, oldPositionindex);
-
-      for (const job of jobsToShiftDown) {
-        await JobApplication.findByIdAndUpdate(job._id, {
-          $set: { order: job.order + 100 },
+    const bulkOps = [];
+    for (let i = 0; i < otherJobsInColumn.length; i++) {
+      const currentJob = otherJobsInColumn[i];
+      const assignedOrder = i < targetIndex ? i * 100 : (i + 1) * 100;
+      if (currentJob.order !== assignedOrder) {
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: currentJob._id },
+            update: { $set: { order: assignedOrder } },
+          },
         });
       }
-    } else if (order > oldPositionindex) {
-      const jobsToShiftUp = otherJobsInColumn.slice(oldPositionindex, order);
-      for (const job of jobsToShiftUp) {
-        const newOrder = Math.max(0, job.order - 100);
-        await JobApplication.findByIdAndUpdate(job._id, {
-          $set: { order: newOrder },
-        });
-      }
+    }
+
+    if (bulkOps.length > 0) {
+      await JobApplication.bulkWrite(bulkOps);
     }
 
     updatesToApply.order = newOrderValue;
