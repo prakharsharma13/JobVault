@@ -14,12 +14,22 @@ async function getBoard(userId: string) {
     name: "Job Hunt",
   }).populate({
     path: "columns",
+    options: { sort: { order: 1 } },
     populate: {
       path: "jobApplications",
+      options: { sort: { order: 1 } },
     },
   });
 
   if (!boardDoc) return null;
+
+  if (boardDoc.columns) {
+    for (const column of boardDoc.columns) {
+      if (column && Array.isArray(column.jobApplications)) {
+        column.jobApplications = column.jobApplications.filter(Boolean);
+      }
+    }
+  }
 
   const board = JSON.parse(JSON.stringify(boardDoc));
 
