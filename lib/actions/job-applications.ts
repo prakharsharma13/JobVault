@@ -222,10 +222,6 @@ export async function updateJobApplication(
 
     updatesToApply.columnId = newColumnId;
     updatesToApply.order = newOrderValue;
-
-    await Column.findByIdAndUpdate(newColumnId, {
-      $push: { jobApplications: id },
-    });
   } else if (order !== undefined && order !== null) {
     const otherJobsInColumn = await JobApplication.find({
       columnId: currentColumnId,
@@ -262,6 +258,31 @@ export async function updateJobApplication(
     new: true,
   });
 
+  // Keep Column.jobApplications synchronized with the sorted order of jobs
+  if (isMovingToDifferentColumn && newColumnId) {
+    const targetJobsSorted = await JobApplication.find({
+      columnId: newColumnId,
+    })
+      .sort({ order: 1 })
+      .select("_id")
+      .lean();
+
+    await Column.findByIdAndUpdate(newColumnId, {
+      $set: { jobApplications: targetJobsSorted.map((j) => j._id) },
+    });
+  } else if (order !== undefined && order !== null) {
+    const columnJobsSorted = await JobApplication.find({
+      columnId: currentColumnId,
+    })
+      .sort({ order: 1 })
+      .select("_id")
+      .lean();
+
+    await Column.findByIdAndUpdate(currentColumnId, {
+      $set: { jobApplications: columnJobsSorted.map((j) => j._id) },
+    });
+  }
+
   revalidatePath("/dashboard");
 
   return { data: JSON.parse(JSON.stringify(updated)) };
@@ -284,9 +305,10 @@ export async function deleteJobApplication(id: string) {
     return { error: "Unauthorized" };
   }
 
-  await Column.findByIdAndUpdate(jobApplication.columnId, {
-    $pull: { jobApplications: id },
-  });
+  await Column.updateMany(
+    { boardId: jobApplication.boardId },
+    { $pull: { jobApplications: id } }
+  );
 
   await JobApplication.deleteOne({ _id: id });
   revalidatePath("/dashboard");
