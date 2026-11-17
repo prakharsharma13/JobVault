@@ -21,6 +21,12 @@ export function useBoard(initialBoard?: Board | null) {
     newColumnId: string,
     newOrder: number
   ) {
+    const previousColumns = columns.map((col) => ({
+      ...col,
+      jobApplications: [...(col.jobApplications || [])],
+    }));
+    setError(null);
+
     setColumns((prev) => {
       const newColumns = prev.map((col) => ({
         ...col,
@@ -81,10 +87,23 @@ export function useBoard(initialBoard?: Board | null) {
         columnId: newColumnId,
         order: newOrder,
       });
+
+      if (result?.error) {
+        setError(result.error);
+        setColumns(previousColumns);
+        return { error: result.error };
+      }
+
+      return { data: result.data };
     } catch (err) {
-      console.error("Error", err);
+      console.error("Error moving job application:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to move job application";
+      setError(errorMessage);
+      setColumns(previousColumns);
+      return { error: errorMessage };
     }
   }
 
-  return { board, columns, error, moveJob };
+  return { board, columns, error, setError, moveJob };
 }

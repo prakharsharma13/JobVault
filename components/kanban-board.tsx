@@ -175,7 +175,7 @@ function SortableJobCard({
 
 export default function KanbanBoard({ board, userId }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const { columns, moveJob } = useBoard(board);
+  const { columns, moveJob, error, setError } = useBoard(board);
 
   const sortedColumns = columns?.sort((a, b) => a.order - b.order) || [];
 
@@ -298,6 +298,19 @@ export default function KanbanBoard({ board, userId }: KanbanBoardProps) {
       onDragEnd={handleDragEnd}
     >
       <div className="space-y-4">
+        {error && (
+          <div className="flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+            <span>{error}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setError(null)}
+              className="h-auto px-2 py-1 text-xs text-destructive hover:bg-destructive/20 hover:text-destructive"
+            >
+              Dismiss
+            </Button>
+          </div>
+        )}
         <div className="scrollbar-subtle flex gap-4 overflow-x-auto pb-4">
           {sortedColumns.map((col, key) => {
             const config = COLUMN_CONFIG[key] || { color: "bg-slate-400" };
