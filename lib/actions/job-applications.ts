@@ -17,6 +17,7 @@ interface JobApplicationData {
   boardId: string;
   tags?: string[];
   description?: string;
+  status?: string;
 }
 
 function sanitizeJobUrl(url?: string): string | undefined {
@@ -57,6 +58,7 @@ export async function createJobApplication(data: JobApplicationData) {
     boardId,
     tags,
     description,
+    status,
   } = data;
 
   if (!company || !position || !columnId || !boardId) {
@@ -101,7 +103,11 @@ export async function createJobApplication(data: JobApplicationData) {
     userId: session.user.id,
     tags: tags || [],
     description,
-    status: "applied",
+    status:
+      status ||
+      (column.name
+        ? column.name.toLowerCase().trim().replace(/\s+/g, "-")
+        : "applied"),
     order: maxOrder && typeof maxOrder.order === "number" ? maxOrder.order + 100 : 0,
   });
 
@@ -127,6 +133,7 @@ export async function updateJobApplication(
     order?: number;
     tags?: string[];
     description?: string;
+    status?: string;
   }
 ) {
   const session = await getSession();
@@ -158,6 +165,7 @@ export async function updateJobApplication(
     order: number;
     tags: string[];
     description: string;
+    status: string;
   }> = {
     ...otherUpdates,
     ...(jobUrl !== undefined ? { jobUrl: sanitizeJobUrl(jobUrl) || "" } : {}),
@@ -183,6 +191,10 @@ export async function updateJobApplication(
     if (!targetColumn) {
       return { error: "Target column not found on your board" };
     }
+
+    updatesToApply.status = targetColumn.name
+      ? targetColumn.name.toLowerCase().trim().replace(/\s+/g, "-")
+      : "applied";
 
     await Column.findByIdAndUpdate(currentColumnId, {
       $pull: { jobApplications: id },
